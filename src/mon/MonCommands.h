@@ -796,6 +796,7 @@ COMMAND("osd tier rm " \
 COMMAND("osd tier cache-mode " \
 	"name=pool,type=CephPoolname " \
 	"name=mode,type=CephChoices,strings=none|writeback|proxy|forward|readonly|readforward|readproxy " \
+	"name=sure,type=CephChoices,strings=--yes-i-really-mean-it,req=false", \
 	"specify the caching mode for cache tier <pool>", "osd", "rw", "cli,rest")
 COMMAND("osd tier set-overlay " \
 	"name=pool,type=CephPoolname " \
