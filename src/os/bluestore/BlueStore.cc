@@ -4076,7 +4076,11 @@ int BlueStore::_wal_finish(TransContext *txc)
   dout(20) << __func__ << " txc " << " seq " << wt.seq << txc << dendl;
 
   std::lock_guard<std::mutex> l(kv_lock);
-  txc->state = TransContext::STATE_WAL_CLEANUP;
+  {
+    std::lock_guard<std::mutex> l2(txc->osr->qlock);
+    txc->state = TransContext::STATE_WAL_CLEANUP;
+    txc->osr->qcond.notify_all();
+  }
   wal_cleanup_queue.push_back(txc);
   kv_cond.notify_one();
   return 0;
@@ -5542,6 +5546,8 @@ int BlueStore::_do_write(
 	(offset / block_size == (o->onode.size - 1) / block_size)) {
       dout(20) << __func__ << " using cached tail" << dendl;
       assert((offset & block_mask) == (o->onode.size & block_mask));
+      // wait for any related wal writes to commit
+      txc->osr->wait_for_wal_on_seq(o->tail_txc_seq);
       uint64_t tail_off = offset % block_size;
       if (tail_off >= o->tail_bl.length()) {
 	bufferlist t;
