@@ -168,10 +168,6 @@ public:
       final_decode_needed(false),
       features(feat) {
     set_tid(tid);
-
-    // also put the client_inc in reqid.inc, so that get_reqid() can
-    // be used before the full message is decoded.
-    reqid.inc = inc;
   }
 private:
   ~MOSDOp() {}
@@ -323,7 +319,15 @@ struct ceph_osd_request_head {
       ::encode(osdmap_epoch, payload);
       ::encode(flags, payload);
       ::encode(reassert_version, payload);
-      ::encode(reqid, payload);
+      if (reqid == osd_reqid_t()) {
+	// also put the client_inc in reqid.inc, so that get_reqid() can
+	// be used before the full message is decoded.
+	osd_reqid_t fake_reqid;
+	fake_reqid.inc = client_inc;
+	::encode(fake_reqid, payload);
+      } else {
+	::encode(reqid, payload);
+      }
       ::encode(client_inc, payload);
       ::encode(mtime, payload);
       ::encode(oloc, payload);
